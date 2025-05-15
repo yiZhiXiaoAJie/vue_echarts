@@ -2,7 +2,7 @@
  * @Author: 马世洁 mashijiezuishuai@outlook.com
  * @Date: 2025-05-12 11:18:56
  * @LastEditors: 马世洁 mashijiezuishuai@outlook.com
- * @LastEditTime: 2025-05-15 17:00:58
+ * @LastEditTime: 2025-05-15 17:35:33
  * @FilePath: \vue_echarts\src\views\HomeView_optimized_v5.vue
  * @Description: Optimized for responsive design, top-down layout, no vertical scroll, top panel larger (approx 58vh).
 -->
@@ -11,7 +11,6 @@ import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import * as echarts from 'echarts'
 import Gauge from '@/components/gauge.vue'
 import chinaMap from '@/assets/china.json'
-import { VerticalScroll } from 'vue3-seamless-scroll'
 
 const categoryChartRef = ref<HTMLElement | null>(null)
 const pieChartRef = ref<HTMLElement | null>(null)
@@ -374,7 +373,7 @@ const list = ref([
             <div>在售</div>
           </div>
           <div class="table-body">
-            <vertical-scroll :list="list" :step="0.5" :hover="true" :limit-scroll-num="1">
+            <Vue3SeamlessScroll  :list="list" :step="0.5" :hover="true" :limit-scroll-num="1">
               <template v-slot="{ data }">
                 <div class="table-row">
                   <div>{{ data.name }}</div>
@@ -384,7 +383,7 @@ const list = ref([
                   <div>{{ data.available ? '是' : '否' }}</div>
                 </div>
               </template>
-            </vertical-scroll>
+            </Vue3SeamlessScroll>
           </div>
         </div>
       </div>
