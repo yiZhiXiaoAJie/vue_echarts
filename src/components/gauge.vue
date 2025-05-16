@@ -2,56 +2,95 @@
  * @Author: 马世洁 mashijiezuishuai@outlook.com
  * @Date: 2025-05-12 11:33:43
  * @LastEditors: 马世洁 mashijiezuishuai@outlook.com
- * @LastEditTime: 2025-05-15 17:26:49
+ * @LastEditTime: 2025-05-16 16:19:54
  * @FilePath: \vue_echarts\src\components\gauge.vue
  * @Description: 这是默认设置,请设置`customMade`, 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
 -->
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick, computed } from 'vue'
 import Vue3Odometer from 'vue3-odometer'
 import 'odometer/themes/odometer-theme-default.css'
 
-const container = ref<HTMLElement | null>(null);
-const containerSize = ref(180); // Default, will be updated by parent or its own width
-const dotCount = 90;
+const container = ref<HTMLElement | null>(null)
+const containerSize = ref(180) // Default, will be updated by parent or its own width
+const dotCount = 90
 
 const getDotStyle = (index: number) => {
-  const angle = (index / dotCount) * 2 * Math.PI;
-  const safeContainerSize = containerSize.value || 180;
+  const angle = (index / dotCount) * 2 * Math.PI
+  const safeContainerSize = containerSize.value || 180
   // Radius relative to the circle container's current size
-  const r = safeContainerSize * 0.42; // Slightly larger radius for dots
-  const center = safeContainerSize / 2;
-  const x = center + r * Math.cos(angle);
-  const y = center + r * Math.sin(angle);
+  const r = safeContainerSize * 0.42 // Slightly larger radius for dots
+  const center = safeContainerSize / 2
+  const x = center + r * Math.cos(angle)
+  const y = center + r * Math.sin(angle)
   return {
     left: `${x}px`,
     top: `${y}px`,
-  };
+  }
 }
 
-const value = ref(3);
+const value = ref(3)
 
 const updateSize = () => {
   if (container.value) {
     // The circle container's size is primarily driven by its CSS width (e.g., clamp function)
     // and its aspect-ratio: 1/1. We read its clientWidth to set containerSize for JS calculations.
-    containerSize.value = container.value.clientWidth;
+    containerSize.value = container.value.clientWidth
   }
-};
+}
 
 onMounted(async () => {
-  const num = (Math.random() * 2 + 1).toFixed(2);
-  value.value = parseFloat(num);
+  const num = (Math.random() * 2 + 1).toFixed(2)
+  value.value = parseFloat(num)
 
-  await nextTick();
-  updateSize();
+  await nextTick()
+  updateSize()
 
-  window.addEventListener('resize', updateSize);
-});
+  window.addEventListener('resize', updateSize)
+})
 
 onUnmounted(() => {
-  window.removeEventListener('resize', updateSize);
-});
+  window.removeEventListener('resize', updateSize)
+})
+
+const getRandomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min
+
+const randomGroup = (index: number) => {
+  const titles = ['A', 'B', 'C', 'D']
+  const meats = ['高档红', '低级肉红', '上级肉红', '精品肉红']
+  const groupItems = Array.from({ length: 2 }, () => ({
+    name: meats[getRandomInt(0, meats.length - 1)],
+    highlight: `${getRandomInt(1, 5)}×${getRandomInt(50, 200)}`,
+    value: getRandomInt(50, 10000),
+    level: 'B',
+  }))
+  return {
+    title: `112-${titles[index % titles.length]}`,
+    image: new URL('@/assets/image/demo1.png', import.meta.url).href,
+    showImage: index < 2,
+    items: groupItems,
+  }
+}
+
+const tableData = ref(Array.from({ length: 3 }, (_, i) => randomGroup(i)))
+
+const totalHighlight = computed(() => {
+  return tableData.value
+    .flatMap((group) => group.items)
+    .reduce((sum, item) => {
+      const [count, unit] = item.highlight.split('×').map(Number)
+      return sum + count * unit
+    }, 0)
+})
+
+const totalValue = computed(() => {
+  return tableData.value
+    .flatMap((group) => group.items)
+    .reduce((sum, item) => {
+      if (typeof item.value === 'number') return sum + item.value
+      return sum
+    }, 0)
+})
 </script>
 
 <template>
@@ -63,7 +102,7 @@ onUnmounted(() => {
         <div class="row">
           <div>二</div>
           <div class="highlight">15708</div>
-          <div>大丰花奔</div>
+          <div>大丰花卉</div>
         </div>
         <div class="sub-text">2837-折射</div>
         <div class="row">
@@ -85,11 +124,11 @@ onUnmounted(() => {
 
     <div class="custom-table-wrapper">
       <div class="custom-table">
-        <table>
+        <!-- <table>
           <tbody>
             <tr class="group-row">
               <td rowspan="2" class="img-cell">
-                <img src="https://via.placeholder.com/30x20" alt="肉类" />
+                <img src="@/assets/image/demo1.png" alt="肉类" />
               </td>
               <td class="group-title">112-B</td>
               <td>高档红</td>
@@ -136,16 +175,52 @@ onUnmounted(() => {
               <td></td>
             </tr>
           </tbody>
+        </table> -->
+
+        <table>
+          <tbody>
+            <template v-for="(group, index) in tableData" :key="index">
+              <tr class="group-row">
+                <td v-if="group.showImage" :rowspan="group.items.length" class="img-cell">
+                  <img :src="group.image" alt="肉类" />
+                </td>
+                <td class="group-title">{{ group.title }}</td>
+                <td>{{ group.items[0].name }}</td>
+                <td class="highlight">{{ group.items[0].highlight }}</td>
+                <td>{{ group.items[0].value }}</td>
+                <td>{{ group.items[0].level }}</td>
+              </tr>
+              <tr v-for="(item, i) in group.items.slice(1)" :key="i">
+                <td></td>
+                <td>{{ item.name }}</td>
+                <td class="highlight">{{ item.highlight }}</td>
+                <td>{{ item.value }}</td>
+                <td></td>
+              </tr>
+            </template>
+            <tr class="group-row">
+              <td></td>
+              <td></td>
+              <td>总量</td>
+              <td class="highlight">{{ totalHighlight }}</td>
+              <td>{{ totalValue }}</td>
+              <td></td>
+            </tr>
+          </tbody>
         </table>
       </div>
     </div>
 
     <div class="bottom-numbers">
       <div class="num-row">
-        <span v-for="n in [4004, 4005, 4006, 4007, 4008, 4009, 404]" :key="n" class="num">{{ n }}</span>
+        <span v-for="n in [4004, 4005, 4006, 4007, 4008, 4009, 404]" :key="n" class="num">{{
+          n
+        }}</span>
       </div>
       <div class="num-row">
-        <span v-for="n in [112, 1367, 4048, 6626, 2505, 1062, 2865]" :key="n" class="num">{{ n }}</span>
+        <span v-for="n in [112, 1367, 4048, 6626, 2505, 1062, 2865]" :key="n" class="num">{{
+          n
+        }}</span>
       </div>
     </div>
   </div>
@@ -172,12 +247,18 @@ onUnmounted(() => {
   max-width: clamp(120px, 22vh, 250px); // Max width for the circle, driven by vh
   aspect-ratio: 1 / 1;
   border-radius: 50%;
-  background: radial-gradient(circle at center, rgba(0,229,255,0.08) 0%, rgba(0,0,0,0.65) 80%);
-  box-shadow: 0 0 clamp(6px, 1.8vw, 14px) rgba(0,229,255,0.45), inset 0 0 clamp(5px, 1.2vw, 11px) rgba(0,229,255,0.3);
+  background: radial-gradient(
+    circle at center,
+    rgba(0, 229, 255, 0.08) 0%,
+    rgba(0, 0, 0, 0.65) 80%
+  );
+  box-shadow:
+    0 0 clamp(6px, 1.8vw, 14px) rgba(0, 229, 255, 0.45),
+    inset 0 0 clamp(5px, 1.2vw, 11px) rgba(0, 229, 255, 0.3);
   margin: 0 auto clamp(2px, 0.5vh, 4px) auto; // Center horizontally, small bottom margin
   overflow: hidden;
   flex: 0 0 auto; // Circle takes its content size (driven by width/aspect-ratio)
-                  // Or, if we want it to be a proportion of the gauge wrapper:
+  // Or, if we want it to be a proportion of the gauge wrapper:
   // flex-basis: 70%; // Example: Circle aims for 70% of the wrapper's height
   // max-height: 70%; // Ensure it doesn't exceed this if flex-basis is used
 }
@@ -188,14 +269,20 @@ onUnmounted(() => {
   height: clamp(1.2px, 0.35vh, 2.5px);
   background: radial-gradient(circle, #18ffff 0%, #00b0ff 70%);
   border-radius: 50%;
-  box-shadow: 0 0 clamp(1px, 0.25vh, 3.5px) rgba(0,229,255,0.55);
+  box-shadow: 0 0 clamp(1px, 0.25vh, 3.5px) rgba(0, 229, 255, 0.55);
   transform: translate(-50%, -50%);
   animation: pulse 1.3s infinite alternate;
 }
 
 @keyframes pulse {
-  0% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 0 clamp(1px, 0.25vh, 3.5px) rgba(0,229,255,0.55); }
-  100% { transform: translate(-50%, -50%) scale(1.25); box-shadow: 0 0 clamp(2.5px, 0.45vh, 5.5px) rgba(0,229,255,0.75); }
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow: 0 0 clamp(1px, 0.25vh, 3.5px) rgba(0, 229, 255, 0.55);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.25);
+    box-shadow: 0 0 clamp(2.5px, 0.45vh, 5.5px) rgba(0, 229, 255, 0.75);
+  }
 }
 
 .center-content {
@@ -208,7 +295,7 @@ onUnmounted(() => {
   text-align: center;
   font-family: 'Roboto', 'Segoe UI', sans-serif;
   font-size: clamp(6px, 1.3vh, 11px); // Slightly larger for bigger circle
-  text-shadow: 0 0 clamp(1px, 0.25vh, 2.5px) rgba(0,229,255,0.3);
+  text-shadow: 0 0 clamp(1px, 0.25vh, 2.5px) rgba(0, 229, 255, 0.3);
 }
 
 .header-text {
@@ -216,7 +303,7 @@ onUnmounted(() => {
   font-weight: 600;
   margin: clamp(1.5px, 0.35vh, 3.5px) 0;
   color: #18ffff;
-  text-shadow: 0 0 clamp(2.5px, 0.55vh, 5.5px) rgba(0,229,255,0.45);
+  text-shadow: 0 0 clamp(2.5px, 0.55vh, 5.5px) rgba(0, 229, 255, 0.45);
 }
 
 .sub-text {
@@ -235,7 +322,7 @@ onUnmounted(() => {
 
 .row > div {
   padding: clamp(1px, 0.15vh, 2px) clamp(1.5px, 0.35vw, 3.5px);
-  background: rgba(0,229,255,0.09);
+  background: rgba(0, 229, 255, 0.09);
   border-radius: clamp(1.5px, 0.25vh, 3px);
   color: #b0e7ff;
   font-size: clamp(6px, 1.1vh, 9px); // Larger
@@ -245,14 +332,16 @@ onUnmounted(() => {
 .highlight {
   color: #18ffff;
   font-weight: 500;
-  text-shadow: 0 0 clamp(1.5px, 0.35vh, 4.5px) rgba(0,229,255,0.4);
+  text-shadow: 0 0 clamp(1.5px, 0.35vh, 4.5px) rgba(0, 229, 255, 0.4);
 }
 
 .o-text {
   font-weight: 600 !important;
   font-size: clamp(11px, 2.2vh, 18px) !important; // Larger
   color: #18ffff !important;
-  text-shadow: 0 0 clamp(1.5px, 0.35vh, 4.5px) #00b0ff, 0 0 clamp(2.5px, 0.65vh, 8.5px) rgba(0,229,255,0.65) !important;
+  text-shadow:
+    0 0 clamp(1.5px, 0.35vh, 4.5px) #00b0ff,
+    0 0 clamp(2.5px, 0.65vh, 8.5px) rgba(0, 229, 255, 0.65) !important;
 }
 
 /* Table and numbers will take less space */
@@ -271,9 +360,9 @@ onUnmounted(() => {
 .custom-table {
   width: 100%;
   box-sizing: border-box;
-  background: rgba(0,0,0,0.35);
+  background: rgba(0, 0, 0, 0.35);
   border-radius: 3px;
-  box-shadow: 0 0 clamp(2px, 0.8vw, 6px) rgba(0,229,255,0.2);
+  box-shadow: 0 0 clamp(2px, 0.8vw, 6px) rgba(0, 229, 255, 0.2);
   padding: clamp(1px, 0.3vw, 3px);
   overflow: hidden;
   display: flex;
@@ -299,8 +388,8 @@ table {
 }
 
 td {
-  border: 0.5px solid rgba(0,229,255,0.08);
-  padding: clamp(0.5px, 0.15vh, 2px) clamp(1px, 0.2vw, 2.5px);
+  border: 0.5px solid rgba(0, 229, 255, 0.08);
+  padding: clamp(0.5px, 0.15vh, 3px) clamp(1px, 0.2vw, 2.5px);
   text-align: center;
   font-size: clamp(12px, 2vh, 15px); // Smaller for table
   color: #b0e7ff;
@@ -315,22 +404,22 @@ td {
   font-weight: 500;
   font-size: clamp(12px, 2vh, 16px); // Smaller
   letter-spacing: 0.1px;
-  text-shadow: 0 0 clamp(1.5px, 0.3vh, 4px) rgba(0,229,255,0.35);
+  text-shadow: 0 0 clamp(1.5px, 0.3vh, 4px) rgba(0, 229, 255, 0.35);
 }
 
 .img-cell {
-  width: clamp(18px, 4vw, 30px);
+  width: clamp(110px, 4vw, 120px);
   padding: clamp(0.5px, 0.1vh, 1px) !important;
 }
 
 .img-cell img {
-  width: 100%;
-  aspect-ratio: 3 / 2;
-  max-width: 22px;
+  // width: 100%;
+  aspect-ratio: 1/1;
+  max-width: 100px;
   object-fit: contain;
   border-radius: clamp(1px, 0.15vh, 1.5px);
-  border: 0.5px solid #00e5ff;
-  box-shadow: 0 0 clamp(1px, 0.2vh, 2.5px) rgba(0,229,255,0.25);
+  // border: 0.5px solid #00e5ff;
+  // box-shadow: 0 0 clamp(1px, 0.2vh, 2.5px) rgba(0, 229, 255, 0.25);
   display: block;
   margin: auto;
 }
@@ -361,10 +450,9 @@ td {
   text-align: center;
   border-radius: 2px;
   padding: clamp(0.5px, 0.15vh, 1px) clamp(1px, 0.2vw, 2.5px);
-  background: rgba(0,229,255,0.07);
-  box-shadow: inset 0 0 clamp(1px, 0.15vh, 2px) rgba(0,229,255,0.2);
+  background: rgba(0, 229, 255, 0.07);
+  box-shadow: inset 0 0 clamp(1px, 0.15vh, 2px) rgba(0, 229, 255, 0.2);
   flex-grow: 1;
   flex-basis: auto;
 }
-
 </style>
